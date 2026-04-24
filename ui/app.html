@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Person Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080A0F;
+            --surface: #0E1118;
+            --card: #13161F;
+            --border: #1E2330;
+            --accent: #E8FF47;
+            --accent2: #FF4757;
+            --text: #F0F2FF;
+            --muted: #5A6080;
+            --glow: rgba(232, 255, 71, 0.15);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Barlow', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.5;
+        }
+
+        /* HEADER */
+        header {
+            position: relative;
+            padding: 3rem 4rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: 'CLASSIFY';
+            position: absolute;
+            right: -2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 12rem;
+            color: rgba(255,255,255,0.02);
+            letter-spacing: 0.05em;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .logo {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .logo-sub {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .logo-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3.2rem;
+            letter-spacing: 0.08em;
+            line-height: 1;
+            background: linear-gradient(135deg, #fff 40%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-family: 'Barlow Condensed', sans-serif;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        /* MAIN LAYOUT */
+        main {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 4rem;
+        }
+
+        /* ATHLETES SECTION */
+        .section-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .athletes-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 4rem;
+        }
+
+        .athlete-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem 1rem 1.2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            overflow: hidden;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        .athlete-card:nth-child(1) { animation-delay: 0.05s; }
+        .athlete-card:nth-child(2) { animation-delay: 0.1s; }
+        .athlete-card:nth-child(3) { animation-delay: 0.15s; }
+        .athlete-card:nth-child(4) { animation-delay: 0.2s; }
+        .athlete-card:nth-child(5) { animation-delay: 0.25s; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .athlete-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--glow), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .athlete-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--accent), 0 0 30px var(--glow);
+        }
+
+        .athlete-card:hover::before { opacity: 1; }
+
+        .athlete-card.match {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(232,255,71,0.08), var(--card));
+            box-shadow: 0 0 40px var(--glow), 0 0 0 2px var(--accent);
+        }
+
+        .athlete-card.match .match-badge {
+            display: flex;
+        }
+
+        .match-badge {
+            display: none;
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: var(--accent);
+            color: #000;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            text-transform: uppercase;
+        }
+
+        .athlete-img-wrap {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            transition: border-color 0.3s;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .athlete-card:hover .athlete-img-wrap,
+        .athlete-card.match .athlete-img-wrap {
+            border-color: var(--accent);
+        }
+
+        .athlete-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .athlete-img-placeholder {
+            font-size: 2rem;
+            color: var(--muted);
+        }
+
+        .athlete-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .athlete-sport {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 0.3rem;
+            letter-spacing: 0.05em;
+        }
+
+        .athlete-score-bar {
+            margin-top: 0.8rem;
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .athlete-score-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .athlete-score-pct {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 0.4rem;
+            letter-spacing: 0.05em;
+        }
+
+        .athlete-score-pct span {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* BOTTOM SECTION */
+        .action-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        /* UPLOAD ZONE */
+        .upload-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+        }
+
+        .upload-panel-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+
+        #dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 0.75rem;
+            padding: 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--surface);
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        #dropzone:hover, #dropzone.dz-drag-hover {
+            border-color: var(--accent);
+            background: rgba(232, 255, 71, 0.03);
+        }
+
+        .dropzone .dz-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        #dropzone:hover .upload-icon {
+            background: var(--accent);
+        }
+
+        #dropzone:hover .upload-icon svg path {
+            stroke: #000;
+        }
+
+        .upload-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .upload-icon svg path {
+            stroke: var(--muted);
+            transition: stroke 0.3s;
+        }
+
+        .dz-message span.note {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .classify-btn {
+            margin-top: 1.5rem;
+            width: 100%;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.9rem 2rem;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 0.15em;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .classify-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .classify-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(232,255,71,0.3);
+        }
+
+        .classify-btn:hover::after { opacity: 0.1; }
+        .classify-btn:active { transform: translateY(0); }
+
+        .classify-btn.loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* RESULTS PANEL */
+        .results-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+        }
+
+        .results-panel-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .result-table th {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 0 0 1rem 0;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-table th:last-child { text-align: right; }
+
+        .result-table td {
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(30,35,48,0.5);
+            vertical-align: middle;
+        }
+
+        .result-table tr:last-child td { border-bottom: none; }
+
+        .result-player-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .result-bar-cell {
+            width: 40%;
+            padding: 0.85rem 1rem;
+        }
+
+        .result-bar-bg {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .result-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent2), var(--accent));
+            border-radius: 2px;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .result-pct {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            text-align: right;
+            min-width: 3.5rem;
+            transition: color 0.3s;
+        }
+
+        .result-pct.top-score {
+            color: var(--accent);
+        }
+
+        /* ERROR */
+        .error-box {
+            display: none;
+            background: rgba(255,71,87,0.08);
+            border: 1px solid rgba(255,71,87,0.3);
+            border-radius: 0.75rem;
+            padding: 1.2rem 1.5rem;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            color: var(--accent2);
+            text-transform: uppercase;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .error-box .err-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .placeholder-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            color: var(--muted);
+            font-family: 'Barlow Condensed', sans-serif;
+            letter-spacing: 0.15em;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .placeholder-state svg {
+            opacity: 0.2;
+        }
+
+        /* Dropzone overrides */
+        .dropzone .dz-preview {
+            background: var(--surface);
+        }
+
+        .dropzone .dz-preview .dz-image {
+            border-radius: 0.5rem;
+        }
+
+        .dropzone .dz-preview .dz-filename span,
+        .dropzone .dz-preview .dz-size span {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .dropzone .dz-preview .dz-remove {
+            color: var(--accent2);
+            text-decoration: none;
+            font-size: 0.75rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        @media (max-width: 900px) {
+            main { padding: 2rem; }
+            header { padding: 2rem; }
+            .athletes-grid { grid-template-columns: repeat(3, 1fr); }
+            .action-section { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .athletes-grid { grid-template-columns: repeat(2, 1fr); }
+            .logo-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <h1 class="logo-title">Sports Person Classifier</h1>
+    </div>
+    <div class="header-badge">
+        <span class="badge-dot"></span>
+        Model Active
+    </div>
+</header>
+
+<main>
+    <div class="section-label">Athletes — 5 Classes</div>
+
+    <div class="athletes-grid">
+        <div class="athlete-card" data-player="lionel_messi">
+            <span class="match-badge">✓ Match</span>
+            <div class="athlete-img-wrap">
+                <img src="C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\test\5.webp" alt="Lionel Messi" onerror="this.parentNode.innerHTML='<span class=\'athlete-img-placeholder\'>⚽</span>'">
+            </div>
+            <div class="athlete-name">Lionel Messi</div>
+            <div class="athlete-sport">Football</div>
+            <div class="athlete-score-bar"><div class="athlete-score-fill"></div></div>
+            <div class="athlete-score-pct">Score: <span id="score_lionel_messi">—</span></div>
+        </div>
+
+        <div class="athlete-card" data-player="maria_sharapova">
+            <span class="match-badge">✓ Match</span>
+            <div class="athlete-img-wrap">
+                <img src="C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\test\4.webp" alt="Maria Sharapova" onerror="this.parentNode.innerHTML='<span class=\'athlete-img-placeholder\'>🎾</span>'">
+            </div>
+            <div class="athlete-name">Maria Sharapova</div>
+            <div class="athlete-sport">Tennis</div>
+            <div class="athlete-score-bar"><div class="athlete-score-fill"></div></div>
+            <div class="athlete-score-pct">Score: <span id="score_maria_sharapova">—</span></div>
+        </div>
+
+        <div class="athlete-card" data-player="roger_federer">
+            <span class="match-badge">✓ Match</span>
+            <div class="athlete-img-wrap">
+                <img src="C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\test\2.webp" alt="Roger Federer" onerror="this.parentNode.innerHTML='<span class=\'athlete-img-placeholder\'>🎾</span>'">
+            </div>
+            <div class="athlete-name">Roger Federer</div>
+            <div class="athlete-sport">Tennis</div>
+            <div class="athlete-score-bar"><div class="athlete-score-fill"></div></div>
+            <div class="athlete-score-pct">Score: <span id="score_roger_federer">—</span></div>
+        </div>
+
+        <div class="athlete-card" data-player="serena_williams">
+            <span class="match-badge">✓ Match</span>
+            <div class="athlete-img-wrap">
+                <img src="C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\test\3.webp" alt="Serena Williams" onerror="this.parentNode.innerHTML='<span class=\'athlete-img-placeholder\'>🎾</span>'">
+            </div>
+            <div class="athlete-name">Serena Williams</div>
+            <div class="athlete-sport">Tennis</div>
+            <div class="athlete-score-bar"><div class="athlete-score-fill"></div></div>
+            <div class="athlete-score-pct">Score: <span id="score_serena_williams">—</span></div>
+        </div>
+
+        <div class="athlete-card" data-player="virat_kohli">
+            <span class="match-badge">✓ Match</span>
+            <div class="athlete-img-wrap">
+                <img src="C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\test\vk.jpg" alt="Virat Kohli" onerror="this.parentNode.innerHTML='<span class=\'athlete-img-placeholder\'>🏏</span>'">
+            </div>
+            <div class="athlete-name">Virat Kohli</div>
+            <div class="athlete-sport">Cricket</div>
+            <div class="athlete-score-bar"><div class="athlete-score-fill"></div></div>
+            <div class="athlete-score-pct">Score: <span id="score_virat_kohli">—</span></div>
+        </div>
+    </div>
+
+    <div class="action-section">
+        <!-- UPLOAD -->
+        <div class="upload-panel">
+            <div class="upload-panel-title">Upload Image</div>
+            <form action="/classify_image" class="dropzone" id="dropzone">
+                <div class="dz-message needsclick">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4v12m0-12L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <span class="note needsclick">Drop image here or click to browse</span>
+                </div>
+            </form>
+
+            <div class="error-box" id="error">
+                <span class="err-icon">⚠</span>
+                <span>Could not detect face &amp; two eyes clearly. Please try a different image.</span>
+            </div>
+
+            <button id="submitBtn" class="classify-btn">Classify Athlete</button>
+        </div>
+
+        <!-- RESULTS -->
+        <div class="results-panel">
+            <div class="results-panel-title">Probability Scores</div>
+
+            <div class="placeholder-state" id="placeholderState">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Upload an image and click classify to see results
+            </div>
+
+            <div id="divClassTable" style="display:none;">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Athlete</th>
+                            <th class="result-bar-cell"></th>
+                            <th>Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="result-player-name">Lionel Messi</td>
+                            <td class="result-bar-cell"><div class="result-bar-bg"><div class="result-bar-fill" id="bar_lionel_messi"></div></div></td>
+                            <td class="result-pct" id="pct_lionel_messi">0%</td>
+                        </tr>
+                        <tr>
+                            <td class="result-player-name">Maria Sharapova</td>
+                            <td class="result-bar-cell"><div class="result-bar-bg"><div class="result-bar-fill" id="bar_maria_sharapova"></div></div></td>
+                            <td class="result-pct" id="pct_maria_sharapova">0%</td>
+                        </tr>
+                        <tr>
+                            <td class="result-player-name">Roger Federer</td>
+                            <td class="result-bar-cell"><div class="result-bar-bg"><div class="result-bar-fill" id="bar_roger_federer"></div></div></td>
+                            <td class="result-pct" id="pct_roger_federer">0%</td>
+                        </tr>
+                        <tr>
+                            <td class="result-player-name">Serena Williams</td>
+                            <td class="result-bar-cell"><div class="result-bar-bg"><div class="result-bar-fill" id="bar_serena_williams"></div></div></td>
+                            <td class="result-pct" id="pct_serena_williams">0%</td>
+                        </tr>
+                        <tr>
+                            <td class="result-player-name">Virat Kohli</td>
+                            <td class="result-bar-cell"><div class="result-bar-bg"><div class="result-bar-fill" id="bar_virat_kohli"></div></div></td>
+                            <td class="result-pct" id="pct_virat_kohli">0%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<script src="./dropzone.min.js"></script>
+<script>
+Dropzone.autoDiscover = false;
+
+function resetUI() {
+    document.querySelectorAll('.athlete-card').forEach(c => c.classList.remove('match'));
+    document.querySelectorAll('.athlete-score-fill').forEach(b => b.style.width = '0%');
+    document.querySelectorAll('[id^="score_"]').forEach(el => el.textContent = '—');
+    document.querySelectorAll('.result-bar-fill').forEach(b => b.style.width = '0%');
+    document.querySelectorAll('.result-pct').forEach(el => { el.textContent = '0%'; el.classList.remove('top-score'); });
+}
+
+function updateResults(match) {
+    let classDictionary = match.class_dictionary;
+    let maxScore = 0;
+    let maxPlayer = '';
+
+    // Find max
+    for (let personName in classDictionary) {
+        let index = classDictionary[personName];
+        let score = parseFloat(match.class_probability[index]);
+        if (score > maxScore) { maxScore = score; maxPlayer = personName; }
+    }
+
+    // Update cards + table
+    for (let personName in classDictionary) {
+        let index = classDictionary[personName];
+        let score = parseFloat(match.class_probability[index]);
+        let pct = score.toFixed(1) + '%';
+
+        // Card
+        let scoreEl = document.getElementById('score_' + personName);
+        if (scoreEl) scoreEl.textContent = pct;
+        let cardFill = document.querySelector(`[data-player="${personName}"] .athlete-score-fill`);
+        if (cardFill) setTimeout(() => { cardFill.style.width = score + '%'; }, 100);
+
+        // Table
+        let barEl = document.getElementById('bar_' + personName);
+        let pctEl = document.getElementById('pct_' + personName);
+        if (barEl) setTimeout(() => { barEl.style.width = score + '%'; }, 100);
+        if (pctEl) {
+            pctEl.textContent = pct;
+            if (personName === maxPlayer) pctEl.classList.add('top-score');
+        }
+    }
+
+    // Highlight match card
+    let matchCard = document.querySelector(`[data-player="${match.class}"]`);
+    if (matchCard) matchCard.classList.add('match');
+
+    // Scroll matched card into view
+    if (matchCard) matchCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function init() {
+    let dz = new Dropzone("#dropzone", {
+        url: "/classify_image",
+        maxFiles: 1,
+        addRemoveLinks: true,
+        dictDefaultMessage: "",
+        autoProcessQueue: false
+    });
+
+    dz.on("addedfile", function() {
+        if (dz.files[1] != null) dz.removeFile(dz.files[0]);
+        $('#error').hide();
+    });
+
+    $("#submitBtn").on('click', function() {
+        if (dz.files.length === 0) return;
+
+        const btn = document.getElementById('submitBtn');
+        btn.classList.add('loading');
+        btn.textContent = 'Classifying…';
+
+        const file = dz.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            const imageData = event.target.result;
+            const url = "http://127.0.0.1:5000/classify_image";
+
+            $.post(url, { image_data: imageData }, function(data) {
+                btn.classList.remove('loading');
+                btn.textContent = 'Classify Athlete';
+                resetUI();
+
+                if (!data || data.length === 0) {
+                    $('#error').show();
+                    $('#divClassTable').hide();
+                    $('#placeholderState').show();
+                    return;
+                }
+
+                let match = data[0];
+                if (match) {
+                    $('#error').hide();
+                    $('#placeholderState').hide();
+                    $('#divClassTable').show();
+                    updateResults(match);
+                }
+            }).fail(function() {
+                btn.classList.remove('loading');
+                btn.textContent = 'Classify Athlete';
+                $('#error').show();
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+$(document).ready(function() {
+    $('#error').hide();
+    $('#divClassTable').hide();
+    init();
+});
+</script>
+</body>
+</html>

@@ -21,8 +21,8 @@ def load_saved_artifacts():
     global __model
 
     # Use relative paths or verify these absolute paths exist on your machine
-    dict_path = r"C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\artifacts\class_dictionary.json"
-    model_path = r"C:\Users\Praveenkumar\OneDrive\Desktop - Copy\Desktop\PROGRAMS\ML\Image class\artifacts\saved_model.pkl"
+    dict_path = r"dict_path"
+    model_path = r"model_path"
 
     with open(dict_path, "r") as f:
         __class_name_to_number = json.load(f)
